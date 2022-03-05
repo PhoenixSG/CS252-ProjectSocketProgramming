@@ -1,4 +1,5 @@
 #include <iostream>
+#include <bits/stdc++.h>
 #include <string>
 #include <sys/socket.h>
 #include <arpa/inet.h>	//inet_addr
@@ -8,6 +9,17 @@
 #include <sstream>
 
 
+void tokenize(std::string &str, char delim, std::vector<std::string> &out)
+{
+	size_t start;
+	size_t end = 0;
+
+	while ((start = str.find_first_not_of(delim, end)) != std::string::npos)
+	{
+		end = str.find(delim, start);
+		out.push_back(str.substr(start, end - start));
+	}
+}
 
 void convert_file_into_words (std::string file);
 
@@ -16,7 +28,53 @@ int main(int argc, char** argv){
 	std::string path = argv[2];	
 	std::string commd = "cd " + path + ";" + "ls -p | grep -v /";
 	system(commd.c_str());
-	//convert_file_into_words(file);
+
+	std::ifstream read_file(file);
+
+	std::string line;
+
+	getline (read_file, line);
+	line.erase( std::remove(line.begin(), line.end(), '\r'), line.end() );
+	std::vector<std::string> out;
+	tokenize(line, ' ', out);
+	std::string client_id = out[2];
+	std::string client_port = out[1];
+	std::string client_number = out[0];
+
+	getline (read_file, line);
+	line.erase( std::remove(line.begin(), line.end(), '\r'), line.end() );
+	std::string number_of_neighbours = line;
+
+	int neighbour = atoi(number_of_neighbours.c_str());
+
+	getline (read_file, line);
+	line.erase( std::remove(line.begin(), line.end(), '\r'), line.end() );
+	std::vector<std::string> out2;
+	tokenize(line, ' ', out2);
+	std::vector<std::string> neighbourclient_number;
+	std::vector<std::string> neighbourclient_port;
+	for(int i=0; i<neighbour; i++){
+		neighbourclient_number.push_back(out2[2*i]);
+		neighbourclient_port.push_back(out2[2*i+1]);
+	}
+
+	getline (read_file, line);
+	line.erase( std::remove(line.begin(), line.end(), '\r'), line.end() );
+	std::string number_of_files = line;
+	
+	
+	int num_files = atoi(number_of_files.c_str());
+
+	std::vector<std::string> files_to_download;
+
+	for(int i=0; i<num_files; i++){
+		getline (read_file, line);
+		line.erase( std::remove(line.begin(), line.end(), '\r'), line.end() );
+		files_to_download.push_back(line);
+	}	
+
+	read_file.close();
+
 /*
 	int socket_desc , new_socket;
 	struct sockaddr_in server , client;
