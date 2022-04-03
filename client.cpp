@@ -1,27 +1,28 @@
-#include <iostream>
-#include <bits/stdc++.h>
-#include <string>
+// Client side C/C++ program to demonstrate Socket programming
+#include <stdio.h>
 #include <sys/socket.h>
-#include <arpa/inet.h> //inet_addr
+#include <arpa/inet.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <sys/ioctl.h>
-#include <sys/poll.h>
-#include <fstream>
-#include <sstream>
-void client(int port)
+#include <string.h>
+
+
+int main(int argc, char const *argv[])
 {
-    int client_socket = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in neighbour_address;
+    int PORT= 7000;
+	int sock = 0, valread;
+	struct sockaddr_in serv_addr;
+	char *hello = "CHUP";
+	char buffer[1024] = {0};
+	sock = socket(AF_INET, SOCK_STREAM, 0);
 
-    neighbour_address.sin_family = AF_INET;
-    neighbour_address.sin_port = port;
-    neighbour_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORT);
+	serv_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	// Convert IPv4 and IPv6 addresses from text to binary form
+	// inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr);
 
-    status[i] = connect(client_socket, (struct sockaddr *)&neighbour_address, sizeof(neighbour_address));
-    if (status[i] > -1)
-    {
-        send(client_socket[i], msg2, strlen(msg2), 0);
-        flag[i] = true;
-    }
+	connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+	send(sock , hello , strlen(hello) , 0 );
+	printf("Hello message sent\n");
+	return 0;
 }

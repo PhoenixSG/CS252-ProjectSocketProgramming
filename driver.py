@@ -4,7 +4,7 @@ import sys
 n = int(sys.argv[1])
 p = int(sys.argv[2])
 
-for i in range(1,n):
-    os.system("./client-phase{} client{}-config.txt files/client{} > output{} &".format(p,i,i,i))
+os.system("g++ client-phase1-cleaned.cpp -o client-phase1 -lpthread")
 
-os.system("./client-phase{} client{}-config.txt files/client{} > output{}".format(p,n,n,n))
+for i in range(1,n+1):
+    os.system("./client-phase{} client{}-config.txt files/client{} > output{} &".format(p,i,i,i))
