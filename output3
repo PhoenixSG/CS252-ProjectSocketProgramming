@@ -1,3 +1,6 @@
+Starting up
 another.txt
-1294 You are 3. I am 1294, on port 8000,with ID 2
-3765 You are 3. I am 3765, on port 7000,with ID 1
+I am 3 on port 5000 with id 4526
+Server  made with fd as 3and port 5000
+Server  listening on port 5000
+Client 4526 starting up. Num neighbours = 2

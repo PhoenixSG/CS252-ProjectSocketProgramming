@@ -1,3 +1,12 @@
+Starting up
 bar.pdf
 random.py
-4526 You are 2. I am 4526, on port 5000,with ID 3
+I am 2 on port 8000 with id 1294
+Server  made with fd as 3and port 8000
+Client 1294 starting up. Num neighbours = 1
+Server  listening on port 8000
+Client attempting connect to port 5000 
+Client done with someone
+Server accept returned 5
+Server accepted a connection 
+Server  listening on port 8000

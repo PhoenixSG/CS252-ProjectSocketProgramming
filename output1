@@ -1,4 +1,17 @@
+Starting up
 f1.txt
 foo.png
-4526 You are 1. I am 4526, on port 5000,with ID 3
-7291 You are 1. I am 7291, on port 6000,with ID 4
+I am 1 on port 7000 with id 3765
+Server  made with fd as 3and port 7000
+Client 3765 starting up. Num neighbours = 2
+Server  listening on port 7000
+Client attempting connect to port 5000 
+Client done with someone
+Client attempting connect to port 6000 
+Client done with someone
+Server accept returned 5
+Server accepted a connection 
+Server  listening on port 7000
+Server accept returned 7
+Server accepted a connection 
+Server  listening on port 7000

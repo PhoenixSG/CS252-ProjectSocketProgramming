@@ -87,6 +87,8 @@ void server(int port, int num_neighbour)
 			}
 		}
 	}
+	printf("Server exiting while loop\n");
+
 }
 
 void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port, std::vector<int> &neighbour_client_number, int PORT, int ID)
@@ -133,6 +135,8 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 					status = 0;
 				}
 			}
+			printf("Client done with someone\n");
+
 		}
 	}
 }
