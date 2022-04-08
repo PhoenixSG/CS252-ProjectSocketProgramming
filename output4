@@ -1,7 +1,3 @@
-Starting up
-file.cpp
-I am 4 on port 6000 with id 7291
-Client 7291 starting up. Num neighbours = 1
-Server Client attempting connect to port 7000 
- made with fd as 4and port 6000
-Server  listening on port 6000
+0
+Client Connected to port 7000 
+Client SENT data to port 7000 

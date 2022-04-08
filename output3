@@ -1,6 +1,5 @@
-Starting up
-another.txt
-I am 3 on port 5000 with id 4526
-Server  made with fd as 3and port 5000
-Server  listening on port 5000
-Client 4526 starting up. Num neighbours = 2
+0
+Client Connected to port 7000 
+Client SENT data to port 7000 
+Client Connected to port 8000 
+Client SENT data to port 8000 
