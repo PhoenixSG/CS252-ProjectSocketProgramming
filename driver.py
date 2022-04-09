@@ -7,6 +7,6 @@ p = int(sys.argv[2])
 os.system("g++ client-phase1.cpp -o client-phase1 -lpthread")
 
 for i in range(1,n):
-    os.system("./client-phase{} client{}-config.txt files/client{} output{} server-output{} &".format(p,i,i,i,i))
+    os.system("./client-phase{} client{}-config.txt files/client{} > output{}&".format(p,i,i,i,i))
 
-os.system("./client-phase{} client{}-config.txt files/client{} output{} server-output{}".format(p,n,n,n,n))
+os.system("./client-phase{} client{}-config.txt files/client{} > output{}".format(p,n,n,n,n))
