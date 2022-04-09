@@ -87,14 +87,10 @@ int main(int argc, char **argv)
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-
 	int client_or_server = fork();
 
 	if (client_or_server == 0)
 	{
-		FILE *output_file;
-		output_file = fopen(argv[3], "w");
-		fprintf(output_file, "%d\n",int(client_or_server));
 		// client process
 
 		// std::cout << "Client " << S_NO << " starting up. Num neighbours = "<<num_neighbour << std::endl;
@@ -115,6 +111,7 @@ int main(int argc, char **argv)
 			neighbour_address[i].sin_family = AF_INET;
 			neighbour_address[i].sin_port = htons(neighbour_client_port[i]);
 			neighbour_address[i].sin_addr.s_addr = inet_addr("127.0.0.1");
+			memset(&(neighbour_address[i].sin_zero), '\0', 8); // zero the rest of the struct
 			// printf("Client attempting connect to port %d \n", neighbour_client_port[i]);
 
 			int status = 0;
@@ -123,18 +120,19 @@ int main(int argc, char **argv)
 				status = connect(client_socket[i], (struct sockaddr *)&neighbour_address[i], sizeof(neighbour_address[i]));
 				if (status > -1)
 				{
-					fprintf(output_file, "Client Connected to port %d \n", neighbour_client_port[i]);
-					int len_of_msg_remaining = strlen(msg2);
-					// int sent_till_now = 0;
-					int sent_status;
-					while (len_of_msg_remaining > 0)
-					{
-						sent_status = send(client_socket[i], msg2, len_of_msg_remaining, 0);
-						msg2 += sent_status;
-						len_of_msg_remaining -= sent_status;
-						// sent_till_now+=sent_status;
-					}
-					fprintf(output_file, "Client SENT data to port %d \n", neighbour_client_port[i]);
+					printf("Client Connected to port %d \n", neighbour_client_port[i]);
+					// int len_of_msg_remaining = strlen(msg2);
+					// // int sent_till_now = 0;
+					// int sent_status;
+					// while (len_of_msg_remaining > 0)
+					// {
+					// 	sent_status = send(client_socket[i], msg2, len_of_msg_remaining, 0);
+					// 	msg2 += sent_status;
+					// 	len_of_msg_remaining -= sent_status;
+					// 	// sent_till_now+=sent_status;
+					// }
+					send(client_socket[i], msg2, strlen(msg2), 0);
+					printf("Client SENT data to port %d \n", neighbour_client_port[i]);
 					close(client_socket[i]);
 				}
 			}
@@ -142,63 +140,172 @@ int main(int argc, char **argv)
 	}
 	else
 	{
-		FILE *output_file;
-		output_file = fopen(argv[4], "w");
-		fprintf(output_file, "%d\n",int(client_or_server));
-		fprintf(output_file, "hello from server\n");
-		// server process
-
-
-		char* buffer = new char[1024];
-		// Creating socket file descriptor
-
-		int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+		int opt = 1;
+		int master_socket, addrlen, new_socket, client_socket[30],
+			max_clients = 30, activity, i, valread, sd;
+		int max_sd;
 		struct sockaddr_in address;
-		int addrlen = sizeof(address);
-		int yes = 1;
-		// std::cout << "Server "<< " made with fd as " << server_socket << "and port " << port << std::endl;
 
-		setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &yes, sizeof(yes));
+		char buffer[1025]; // data buffer of 1K
+
+		// set of socket descriptors
+		fd_set readfds;
+
+		// a message
+		// char *message = "Hello";
+
+		// initialise all client_socket[] to 0 so not checked
+		for (i = 0; i < max_clients; i++)
+		{
+			client_socket[i] = 0;
+		}
+
+		// create a master socket
+		if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+		{
+			perror("socket failed");
+			exit(EXIT_FAILURE);
+		}
+
+		// set master socket to allow multiple connections ,
+		// this is just a good habit, it will work without this
+		if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,
+					   sizeof(opt)) < 0)
+		{
+			perror("setsockopt");
+			exit(EXIT_FAILURE);
+		}
+
+		// type of socket created
 		address.sin_family = AF_INET;
 		address.sin_addr.s_addr = INADDR_ANY;
 		address.sin_port = htons(PORT);
-		bind(server_socket, (struct sockaddr *)&address, sizeof(address));
-		int count = 0;
 
-		listen(server_socket, 20);
-		while (count < num_neighbour)
+		// bind the socket to localhost port 8888
+		if (bind(master_socket, (struct sockaddr *)&address, sizeof(address)) < 0)
 		{
+			perror("bind failed");
+			exit(EXIT_FAILURE);
+		}
+		printf("Listener on port %d \n", PORT);
 
-			// std::cout << "Server " << " listening on port " << port << std::endl;
-
-			int new_client = accept(server_socket, (struct sockaddr *)&address, (socklen_t *)&addrlen);
-			// std::cout << "Server accept returned " << new_client << std::endl;
-			fprintf(output_file, "CONNECTION AAYA\n\n");
-			if (new_client > -1)
-			{
-				fprintf(output_file, "Server accepted a connection\n");
-				
-				char* buf = buffer;
-				// int received_till_now = 0;
-				int client_msg_len=1;
-				int max_len = 1024;
-				if (client_msg_len!=0)
-				{
-					client_msg_len = recv(new_client, buffer, max_len, 0);
-					// received_till_now +=client_msg_len;
-					buffer+=client_msg_len;
-					max_len-=client_msg_len;
-				}
-				fprintf(output_file, "Server RECEIVED DATA on %d\n",new_client);
-
-				fprintf(output_file, "%s", buf);
-				buffer = buf;
-			}
+		// try to specify maximum of 3 pending connections for the master socket
+		if (listen(master_socket, 3) < 0)
+		{
+			perror("listen");
+			exit(EXIT_FAILURE);
 		}
 
-		fprintf(output_file, "Server exiting\n");
-	}
+		// accept the incoming connection
+		addrlen = sizeof(address);
+		puts("Waiting for connections ...");
 
+		while (1)
+		{
+			// clear the socket set
+			FD_ZERO(&readfds);
+
+			// add master socket to set
+			FD_SET(master_socket, &readfds);
+			max_sd = master_socket;
+
+			// add child sockets to set
+			for (i = 0; i < max_clients; i++)
+			{
+				// socket descriptor
+				sd = client_socket[i];
+
+				// if valid socket descriptor then add to read list
+				if (sd > 0)
+					FD_SET(sd, &readfds);
+
+				// highest file descriptor number, need it for the select function
+				if (sd > max_sd)
+					max_sd = sd;
+			}
+
+			// wait for an activity on one of the sockets , timeout is NULL ,
+			// so wait indefinitely
+			activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
+
+			if ((activity < 0) && (errno != EINTR))
+			{
+				printf("select error");
+			}
+
+			// If something happened on the master socket ,
+			// then its an incoming connection
+			if (FD_ISSET(master_socket, &readfds))
+			{
+				if ((new_socket = accept(master_socket,
+										 (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0)
+				{
+					perror("accept");
+					exit(EXIT_FAILURE);
+				}
+
+				// inform user of socket number - used in send and receive commands
+				printf("New connection , socket fd is %d , ip is : %s , port : %d\n", new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+
+				// // send new connection greeting message
+				// if (send(new_socket, message, strlen(message), 0) != strlen(message))
+				// {
+				// 	perror("send");
+				// }
+
+				// puts("Welcome message sent successfully");
+
+				// add new socket to array of sockets
+				for (i = 0; i < max_clients; i++)
+				{
+					// if position is empty
+					if (client_socket[i] == 0)
+					{
+						client_socket[i] = new_socket;
+						printf("Adding to list of sockets as %d\n", i);
+
+						break;
+					}
+				}
+			}
+
+			// else its some IO operation on some other socket
+			for (i = 0; i < max_clients; i++)
+			{
+				sd = client_socket[i];
+
+				if (FD_ISSET(sd, &readfds))
+				{
+					// Check if it was for closing , and also read the
+					// incoming message
+					if ((valread = read(sd, buffer, 1024)) == 0)
+					{
+						// Somebody disconnected , get his details and print
+						getpeername(sd, (struct sockaddr *)&address,
+									(socklen_t *)&addrlen);
+						printf("Host disconnected , ip %s , port %d \n",
+							   inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+
+						// Close the socket and mark as 0 in list for reuse
+						close(sd);
+						client_socket[i] = 0;
+					}
+
+					// Echo back the message that came in
+					else
+					{
+						printf("Received %d bits of data\n", valread);
+						// set the string terminating NULL byte on the end
+						// of the data read
+						buffer[valread] = '\0';
+						printf("Valread = %d\n", valread);
+						printf("Buffer = %s\n", buffer);
+						send(sd, buffer, strlen(buffer), 0);
+					}
+				}
+			}
+		}
+	}
 
 	return 0;
 }

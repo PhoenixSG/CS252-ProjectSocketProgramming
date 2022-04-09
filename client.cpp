@@ -13,7 +13,7 @@
 
 int main(int argc, char const *argv[])
 {
-	int PORT = 7002;
+	int PORT = 8888;
 	int sock = 0, valread;
 	struct sockaddr_in serv_addr;
 	std::string hello = "Hello, this is the message";

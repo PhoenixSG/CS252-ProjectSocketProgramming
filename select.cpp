@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     fd_set readfds;
 
     // a message
-    char *message = "ECHO Daemon v1.0 \r\n";
+    char *message = "Hello";
 
     // initialise all client_socket[] to 0 so not checked
     for (i = 0; i < max_clients; i++)
@@ -172,6 +172,7 @@ int main(int argc, char *argv[])
                 // Echo back the message that came in
                 else
                 {
+                    printf("Received %d bits of data\n",valread);
                     // set the string terminating NULL byte on the end
                     // of the data read
                     buffer[valread] = '\0';
