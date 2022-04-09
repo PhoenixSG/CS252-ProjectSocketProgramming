@@ -34,7 +34,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 {
 	// client process
 
-	std::cout << "Client " << S_NO << " starting up. Num neighbours = " << num_neighbour << std::endl;
+	// std::cout << "Client " << S_NO << " starting up. Num neighbours = " << num_neighbour << std::endl;
 
 	struct sockaddr_in neighbour_address[num_neighbour];
 	int client_socket[num_neighbour];
@@ -44,7 +44,8 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	{
 
 		int valread;
-		std::string msg = std::to_string(S_NO) + " You are " + std::to_string(neighbour_client_number[i]) + ". I am " + std::to_string(S_NO) + ", on port " + std::to_string(PORT) + ",with ID " + std::to_string(ID);
+		// std::string msg = std::to_string(S_NO) + " You are " + std::to_string(neighbour_client_number[i]) + ". I am " + std::to_string(S_NO) + ", on port " + std::to_string(PORT) + ",with ID " + 
+		std::string msg = "Connected to "+std::to_string(S_NO)+" with unique-ID "+std::to_string(ID)+" on port "+std::to_string(PORT);
 		const char *msg2 = msg.c_str();
 		char buffer[1024] = {0};
 		client_socket[i] = socket(AF_INET, SOCK_STREAM, 0);
@@ -61,7 +62,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 			status = connect(client_socket[i], (struct sockaddr *)&neighbour_address[i], sizeof(neighbour_address[i]));
 			if (status > -1)
 			{
-				printf("Client Connected to port %d \n", neighbour_client_port[i]);
+				// printf("Client Connected to port %d \n", neighbour_client_port[i]);
 				// int len_of_msg_remaining = strlen(msg2);
 				// // int sent_till_now = 0;
 				// int sent_status;
@@ -73,7 +74,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 				// 	// sent_till_now+=sent_status;
 				// }
 				send(client_socket[i], msg2, strlen(msg2), 0);
-				printf("Client SENT data to port %d \n", neighbour_client_port[i]);
+				// printf("Client SENT data to port %d \n", neighbour_client_port[i]);
 				close(client_socket[i]);
 			}
 		}
@@ -83,7 +84,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 void server(int PORT)
 {
 
-	std::cout << "Server starting up" << std::endl;
+	// std::cout << "Server starting up" << std::endl;
 
 	int opt = 1;
 	int master_socket, addrlen, new_socket, client_socket[30],
@@ -132,7 +133,7 @@ void server(int PORT)
 		perror("bind failed");
 		exit(EXIT_FAILURE);
 	}
-	printf("Listener on port %d \n", PORT);
+	// printf("Listener on port %d \n", PORT);
 
 	// try to specify maximum of 3 pending connections for the master socket
 	if (listen(master_socket, 3) < 0)
@@ -143,7 +144,7 @@ void server(int PORT)
 
 	// accept the incoming connection
 	addrlen = sizeof(address);
-	puts("Waiting for connections ...");
+	// puts("Waiting for connections ...");
 
 	while (1)
 	{
@@ -190,7 +191,7 @@ void server(int PORT)
 			}
 
 			// inform user of socket number - used in send and receive commands
-			printf("New connection , socket fd is %d , ip is : %s , port : %d\n", new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+			// printf("New connection , socket fd is %d , ip is : %s , port : %d\n", new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
 			// // send new connection greeting message
 			// if (send(new_socket, message, strlen(message), 0) != strlen(message))
@@ -207,7 +208,7 @@ void server(int PORT)
 				if (client_socket[i] == 0)
 				{
 					client_socket[i] = new_socket;
-					printf("Adding to list of sockets as %d\n", i);
+					// printf("Adding to list of sockets as %d\n", i);
 
 					break;
 				}
@@ -228,8 +229,7 @@ void server(int PORT)
 					// Somebody disconnected , get his details and print
 					getpeername(sd, (struct sockaddr *)&address,
 								(socklen_t *)&addrlen);
-					printf("Host disconnected , ip %s , port %d \n",
-						   inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+					// printf("Host disconnected , ip %s , port %d \n",inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
 					// Close the socket and mark as 0 in list for reuse
 					close(sd);
@@ -239,12 +239,12 @@ void server(int PORT)
 				// Echo back the message that came in
 				else
 				{
-					printf("Received %d bits of data\n", valread);
+					// printf("Received %d bits of data\n", valread);
 					// set the string terminating NULL byte on the end
 					// of the data read
 					buffer[valread] = '\0';
-					printf("!!!!!!!!!!!!!!!Valread = %d\n", valread);
-					printf("!!!!!!!!!!!!!!!Buffer = %s\n", buffer);
+					// printf("!!!!!!!!!!!!!!!Valread = %d\n", valread);
+					printf("%s\n", buffer);
 					send(sd, buffer, strlen(buffer), 0);
 				}
 			}
