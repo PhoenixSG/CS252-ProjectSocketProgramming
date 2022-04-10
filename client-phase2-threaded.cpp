@@ -95,7 +95,7 @@ std::string generate_message(std::vector<std::string> files, std::string ID)
 	return retval;
 }
 
-void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port, std::vector<int> &neighbour_client_number, int PORT, int ID)
+void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port, std::vector<int> &neighbour_client_number, int PORT, int ID, std::string path)
 {
 	struct sockaddr_in neighbour_address[num_neighbour];
 	int client_socket[num_neighbour];
@@ -105,7 +105,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	{
 
 		int valread;
-		std::string msg = "Connected to " + std::to_string(ID) + " with unique-ID " + std::to_string(S_NO) + " on port " + std::to_string(PORT) + ";" + GetStdoutFromCommand("cd files/client" + std::to_string(ID) + " ;ls -p | grep -v /");
+		std::string msg = "Connected to " + std::to_string(ID) + " with unique-ID " + std::to_string(S_NO) + " on port " + std::to_string(PORT) + ";" + GetStdoutFromCommand("cd " + path + " ;ls -p | grep -v /");
 		const char *msg2 = msg.c_str();
 		char buffer[1024] = {0};
 		client_socket[i] = socket(AF_INET, SOCK_STREAM, 0);
@@ -128,11 +128,11 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	}
 }
 
-void server(int PORT, std::vector<std::string> files_to_download)
+void server(int PORT, std::vector<std::string> files_to_download, int num_neighbours)
 {
 	int opt = 1;
 	int master_socket, addrlen, new_socket, client_socket[30], max_clients = 30, activity, i, valread, sd;
-	int max_sd;
+	int max_sd, num_connections = 0;
 	struct sockaddr_in address;
 
 	char buffer[1025];
@@ -168,8 +168,9 @@ void server(int PORT, std::vector<std::string> files_to_download)
 	}
 
 	addrlen = sizeof(address);
-
-	while (1)
+	std::map<std::string, int> file_map;
+	std::map<int, std::string> m;
+	while (num_connections < num_neighbours)
 	{
 		FD_ZERO(&readfds);
 		FD_SET(master_socket, &readfds);
@@ -207,7 +208,7 @@ void server(int PORT, std::vector<std::string> files_to_download)
 			}
 		}
 
-		std::map<std::string, int> file_map;
+		
 
 		for (i = 0; i < max_clients; i++)
 		{
@@ -225,15 +226,15 @@ void server(int PORT, std::vector<std::string> files_to_download)
 
 				else
 				{
-					
+					++num_connections;
 					buffer[valread] = '\0';
 					std::string str = buffer;
 					std::string str2 = buffer;
 
 					std::istringstream s(str);
-					std::string temp, word;
+					std::string temp, word, word2;
 
-					s >> temp >> temp >> temp >> temp >> temp >> word;
+					s >> temp >> temp >> word2 >> temp >> temp >> word;
 
 					auto file_names = get_file_names(str2);
 					auto files_available = intersection(file_names, files_to_download);
@@ -252,18 +253,26 @@ void server(int PORT, std::vector<std::string> files_to_download)
 
 					auto prnt = process(str)+ "\n"; // + generate_message(files_available, word);
 
-					std::cout << prnt;
+					//std::cout << prnt;
+					m[atoi(word2.c_str())] = prnt;
 				}
 			}
 		}
 
-		for (auto i = file_map.begin(); i != file_map.end(); ++i)
-		{
-
-			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
-			std::cout << s1;
-		}
+		
 	}
+
+	for(auto x:m){
+		std::cout<<x.second;
+	}
+	
+
+	for (auto i = file_map.begin(); i != file_map.end(); ++i)
+	{
+		std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
+		std::cout << s1;
+	}
+
 }
 
 int main(int argc, char **argv)
@@ -274,7 +283,7 @@ int main(int argc, char **argv)
 	print_file_names(argv);
 
 	std::string file = argv[1];
-
+	std::string path = argv[2];
 	std::ifstream read_file(file);
 
 	std::string line;
@@ -324,13 +333,14 @@ int main(int argc, char **argv)
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	std::thread t1(server, PORT, std::ref(files_to_download));
+	std::thread t1(server, PORT, std::ref(files_to_download), num_neighbour);
 
 	std::thread t2(client, S_NO, num_neighbour, std::ref(neighbour_client_port),
-				   std::ref(neighbour_client_number), PORT, ID);
+				   std::ref(neighbour_client_number), PORT, ID, std::ref(path));
 
 	t1.join();
 	t2.join();
+	
 
 	return 0;
 }
