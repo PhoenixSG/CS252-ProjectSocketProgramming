@@ -1,6 +1,6 @@
-1 7000 3765
+1 5000 2095
 2
-3 5000 4 6000
+3 7000 4 8000 
 2
-bar.pdf
-file.cpp
+foo.png
+another.txt

@@ -30,7 +30,8 @@ void print_file_names(char **argv)
 	system(commd.c_str());
 }
 
-std::vector<std::string> get_file_names (std::string msg){
+std::vector<std::string> get_file_names(std::string msg)
+{
 
 	auto otp = msg.substr(msg.find(";"));
 	otp = &otp[1];
@@ -39,57 +40,59 @@ std::vector<std::string> get_file_names (std::string msg){
 	return retval;
 }
 
-std::string GetStdoutFromCommand(std::string cmd) {
+std::string GetStdoutFromCommand(std::string cmd)
+{
 
-    std::string data;
-    FILE * stream;
-    
-    char buffer[1000];
-    
+	std::string data;
+	FILE *stream;
 
-    stream = popen(cmd.c_str(), "r");
-    if (stream) {
-        while (!feof(stream))
-            if (fgets(buffer, 1000, stream) != NULL) data.append(buffer);
-        pclose(stream);
-    }
-    return data;
+	char buffer[1000];
+
+	stream = popen(cmd.c_str(), "r");
+	if (stream)
+	{
+		while (!feof(stream))
+			if (fgets(buffer, 1000, stream) != NULL)
+				data.append(buffer);
+		pclose(stream);
+	}
+	return data;
 }
 
-std::string process(std::string const& s)
+std::string process(std::string const &s)
 {
-    std::string::size_type pos = s.find(';');
-    if (pos != std::string::npos)
-    {
-        return s.substr(0, pos);
-    }
-    else
-    {
-        return s;
-    }
+	std::string::size_type pos = s.find(';');
+	if (pos != std::string::npos)
+	{
+		return s.substr(0, pos);
+	}
+	else
+	{
+		return s;
+	}
 }
 
 std::vector<std::string> intersection(std::vector<std::string> &v1,
-                                      std::vector<std::string> &v2){
-    std::vector<std::string> v3;
+									  std::vector<std::string> &v2)
+{
+	std::vector<std::string> v3;
 
-    std::sort(v1.begin(), v1.end());
-    std::sort(v2.begin(), v2.end());
+	std::sort(v1.begin(), v1.end());
+	std::sort(v2.begin(), v2.end());
 
-    std::set_intersection(v1.begin(),v1.end(),
-                          v2.begin(),v2.end(),
-                          back_inserter(v3));
-    return v3;
+	std::set_intersection(v1.begin(), v1.end(),
+						  v2.begin(), v2.end(),
+						  back_inserter(v3));
+	return v3;
 }
 
-std::string generate_message (std::vector<std::string> files, std::string ID){
+std::string generate_message(std::vector<std::string> files, std::string ID)
+{
 
 	std::string retval = "";
-	for(auto x : files)
+	for (auto x : files)
 		retval += ("Found " + x + " at " + ID + " with MD5 0 at depth 1\n");
 	return retval;
-
-
 }
 
 void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port, std::vector<int> &neighbour_client_number, int PORT, int ID)
@@ -102,8 +105,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	{
 
 		int valread;
-		std::string msg = "Connected to "+std::to_string(ID)+" with unique-ID "+std::to_string(S_NO)+" on port "+std::to_string(PORT) 
-		+ ";" + GetStdoutFromCommand("cd files/client" + std::to_string(ID) + " ;ls -p | grep -v /");
+		std::string msg = "Connected to " + std::to_string(ID) + " with unique-ID " + std::to_string(S_NO) + " on port " + std::to_string(PORT) + ";" + GetStdoutFromCommand("cd files/client" + std::to_string(ID) + " ;ls -p | grep -v /");
 		const char *msg2 = msg.c_str();
 		char buffer[1024] = {0};
 		client_socket[i] = socket(AF_INET, SOCK_STREAM, 0);
@@ -111,7 +113,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		neighbour_address[i].sin_family = AF_INET;
 		neighbour_address[i].sin_port = htons(neighbour_client_port[i]);
 		neighbour_address[i].sin_addr.s_addr = inet_addr("127.0.0.1");
-		memset(&(neighbour_address[i].sin_zero), '\0', 8); 
+		memset(&(neighbour_address[i].sin_zero), '\0', 8);
 
 		int status = -1;
 		while (status == -1)
@@ -133,14 +135,13 @@ void server(int PORT, std::vector<std::string> files_to_download)
 	int max_sd;
 	struct sockaddr_in address;
 
-	char buffer[1025]; 
+	char buffer[1025];
 	fd_set readfds;
 	for (i = 0; i < max_clients; i++)
 	{
 		client_socket[i] = 0;
 	}
 
-	
 	if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0)
 	{
 		perror("socket failed");
@@ -152,7 +153,6 @@ void server(int PORT, std::vector<std::string> files_to_download)
 		exit(EXIT_FAILURE);
 	}
 
-	
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(PORT);
@@ -207,12 +207,12 @@ void server(int PORT, std::vector<std::string> files_to_download)
 			}
 		}
 
-		std::map <std::string, int>file_map;
+		std::map<std::string, int> file_map;
 
 		for (i = 0; i < max_clients; i++)
 		{
 			sd = client_socket[i];
-			
+
 			if (FD_ISSET(sd, &readfds))
 			{
 				if ((valread = read(sd, buffer, 1024)) == 0)
@@ -225,52 +225,50 @@ void server(int PORT, std::vector<std::string> files_to_download)
 
 				else
 				{
+					
 					buffer[valread] = '\0';
 					std::string str = buffer;
 					std::string str2 = buffer;
-					
+
 					std::istringstream s(str);
 					std::string temp, word;
 
-					s >> temp >> temp >> temp >>temp >> temp >> word;
-					
+					s >> temp >> temp >> temp >> temp >> temp >> word;
+
 					auto file_names = get_file_names(str2);
 					auto files_available = intersection(file_names, files_to_download);
-					for(auto x : files_available){
+					for (auto x : files_available)
+					{
 						int w = std::stoi(word);
-						if ( file_map.find(x) == file_map.end() ) {
-						  file_map[x] = w;
-						} 
-						else {
-						  file_map[x] = std::min(w, file_map[x]);
+						if (file_map.find(x) == file_map.end())
+						{
+							file_map[x] = w;
 						}
-
-
+						else
+						{
+							file_map[x] = std::min(w, file_map[x]);
+						}
 					}
-						
-					auto prnt = process(str) ;//+ "\n" + generate_message(files_available, word);
-					
+
+					auto prnt = process(str)+ "\n"; // + generate_message(files_available, word);
+
 					std::cout << prnt;
-					
-					send(sd, prnt.c_str(), strlen(prnt.c_str()), 0);
 				}
 			}
 		}
 
+		for (auto i = file_map.begin(); i != file_map.end(); ++i)
+		{
 
-		for (auto i = file_map.begin(); i != file_map.end(); ++i) {
-  			
-  			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
-			
+			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
+			std::cout << s1;
 		}
-		
 	}
 }
 
 int main(int argc, char **argv)
 {
-	
-	
+
 	////////////////////Processing
 
 	print_file_names(argv);
@@ -318,7 +316,7 @@ int main(int argc, char **argv)
 	{
 		getline(read_file, line);
 		line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-		
+
 		files_to_download.push_back(line);
 	}
 
@@ -333,6 +331,6 @@ int main(int argc, char **argv)
 
 	t1.join();
 	t2.join();
-	
+
 	return 0;
 }

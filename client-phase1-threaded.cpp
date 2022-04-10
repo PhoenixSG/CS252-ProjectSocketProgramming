@@ -245,7 +245,7 @@ void server(int PORT)
 					buffer[valread] = '\0';
 					// printf("!!!!!!!!!!!!!!!Valread = %d\n", valread);
 					printf("%s\n", buffer);
-					send(sd, buffer, strlen(buffer), 0);
+
 				}
 			}
 		}
