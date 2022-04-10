@@ -146,8 +146,7 @@ void server(int PORT, std::vector<std::string> files_to_download)
 		perror("socket failed");
 		exit(EXIT_FAILURE);
 	}
-	if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,
-				   sizeof(opt)) < 0)
+	if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0)
 	{
 		perror("setsockopt");
 		exit(EXIT_FAILURE);
@@ -207,6 +206,9 @@ void server(int PORT, std::vector<std::string> files_to_download)
 				}
 			}
 		}
+
+		std::map <std::string, int>file_map;
+
 		for (i = 0; i < max_clients; i++)
 		{
 			sd = client_socket[i];
@@ -228,13 +230,25 @@ void server(int PORT, std::vector<std::string> files_to_download)
 					std::string str2 = buffer;
 					
 					std::istringstream s(str);
-					std::string temp, word, word2;
+					std::string temp, word;
 
-					s >> temp >> temp >> word2 >>temp >> temp >> word;
+					s >> temp >> temp >> temp >>temp >> temp >> word;
 					
 					auto file_names = get_file_names(str2);
 					auto files_available = intersection(file_names, files_to_download);
-					auto prnt = process(str) + "\n" + generate_message(files_available, word);
+					for(auto x : files_available){
+						int w = std::stoi(word);
+						if ( file_map.find(x) == file_map.end() ) {
+						  file_map[x] = w;
+						} 
+						else {
+						  file_map[x] = std::min(w, file_map[x]);
+						}
+
+
+					}
+						
+					auto prnt = process(str) ;//+ "\n" + generate_message(files_available, word);
 					
 					std::cout << prnt;
 					
@@ -242,15 +256,19 @@ void server(int PORT, std::vector<std::string> files_to_download)
 				}
 			}
 		}
+
+
+		for (auto i = file_map.begin(); i != file_map.end(); ++i) {
+  			
+  			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
+			
+		}
 		
 	}
 }
 
 int main(int argc, char **argv)
 {
-	/*auto y = get_file_names("abcdef;" + GetStdoutFromCommand("cd files/client1 ; ls -p | grep -v /"));
-	for(auto x : y)
-		std::cout << x << " ";*/
 	
 	
 	////////////////////Processing
