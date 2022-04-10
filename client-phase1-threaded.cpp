@@ -45,7 +45,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 
 		int valread;
 		// std::string msg = std::to_string(S_NO) + " You are " + std::to_string(neighbour_client_number[i]) + ". I am " + std::to_string(S_NO) + ", on port " + std::to_string(PORT) + ",with ID " + 
-		std::string msg = "Connected to "+std::to_string(S_NO)+" with unique-ID "+std::to_string(ID)+" on port "+std::to_string(PORT);
+		std::string msg = "Connected to "+std::to_string(ID)+" with unique-ID "+std::to_string(S_NO)+" on port "+std::to_string(PORT);
 		const char *msg2 = msg.c_str();
 		char buffer[1024] = {0};
 		client_socket[i] = socket(AF_INET, SOCK_STREAM, 0);
@@ -81,11 +81,12 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	}
 }
 
-void server(int PORT)
+void server(int PORT, int num_neighbour)
 {
-
+	std::map<int,std::string> m;
 	// std::cout << "Server starting up" << std::endl;
-
+	int num_connected = 0;
+	// printf("%d\n", num_connected);
 	int opt = 1;
 	int master_socket, addrlen, new_socket, client_socket[30],
 		max_clients = 30, activity, i, valread, sd;
@@ -146,7 +147,7 @@ void server(int PORT)
 	addrlen = sizeof(address);
 	// puts("Waiting for connections ...");
 
-	while (1)
+	while (num_connected<num_neighbour)
 	{
 		// clear the socket set
 		FD_ZERO(&readfds);
@@ -242,14 +243,26 @@ void server(int PORT)
 					// printf("Received %d bits of data\n", valread);
 					// set the string terminating NULL byte on the end
 					// of the data read
+					num_connected++;
 					buffer[valread] = '\0';
-					// printf("!!!!!!!!!!!!!!!Valread = %d\n", valread);
-					printf("%s\n", buffer);
 
+					std::string str = buffer;
+
+					std::istringstream s(str);
+					std::string temp, word;
+
+					s >> temp >> temp >> word;
+					m[atoi(word.c_str())] = str;
+					// printf("%d\n",num_connected);
+					// printf("!!!!!!!!!!!!!!!Valread = %d\n", valread);
 				}
 			}
 		}
 	}
+	for(auto x:m){
+		std::cout<<x.second<<std::endl;
+	}
+
 }
 
 int main(int argc, char **argv)
@@ -309,7 +322,7 @@ int main(int argc, char **argv)
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	std::thread t1(server, PORT);
+	std::thread t1(server, PORT, num_neighbour);
 
 	// server(server_socket, change, address, num_neighbour);
 
