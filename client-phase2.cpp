@@ -208,8 +208,6 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 			}
 		}
 
-		
-
 		for (i = 0; i < max_clients; i++)
 		{
 			sd = client_socket[i];
@@ -251,28 +249,40 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 						}
 					}
 
-					auto prnt = process(str)+ "\n"; // + generate_message(files_available, word);
+					auto prnt = process(str) + "\n"; // + generate_message(files_available, word);
 
-					//std::cout << prnt;
+					// std::cout << prnt;
 					m[atoi(word2.c_str())] = prnt;
 				}
 			}
 		}
-
-		
 	}
 
-	for(auto x:m){
-		std::cout<<x.second;
+	for (auto x : m)
+	{
+		std::cout << x.second;
 	}
-	
+	for (auto x : files_to_download)
+	{
+		if (file_map.find(x) == file_map.end())
+		{
+			file_map[x] = 0;
+		}
+	}
 
 	for (auto i = file_map.begin(); i != file_map.end(); ++i)
 	{
-		std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
-		std::cout << s1;
+		if (i->second == 0)
+		{
+			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 0\n");
+			std::cout << s1;
+		}
+		else
+		{
+			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
+			std::cout << s1;
+		}
 	}
-
 }
 
 int main(int argc, char **argv)
@@ -340,7 +350,6 @@ int main(int argc, char **argv)
 
 	t1.join();
 	t2.join();
-	
 
 	return 0;
 }
