@@ -540,7 +540,13 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	*/
        
 
-
+	for (auto x : files_to_download)
+	{
+		if (file_map.find(x) == file_map.end())
+		{
+			file_map[x] = 0;
+		}
+	}
 
 	
 	for(auto x:m){
@@ -562,7 +568,7 @@ int main(int argc, char **argv)
 
 	////////////////////Processing
 
-	//print_file_names(argv);
+	print_file_names(argv);
 
 	std::string file = argv[1];
 	std::string path = argv[2];
