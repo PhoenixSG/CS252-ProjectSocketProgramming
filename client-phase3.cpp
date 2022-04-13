@@ -229,7 +229,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		recv(client_socket[i], buffer, 1000, 0);
 		std::string m = buffer;
 		std::vector<std::string> x;
-		auto c = m[0];
+		int c = m[0] - '0';
 		m.erase(m.begin());
 		tokenize(m, '\n', x);
 		auto l = piece_together(x, ' ');
@@ -340,6 +340,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	std::map<int, std::string> m;
 	std::map<std::string, off_t> file_sz_map;
 	std::vector<std::string> file_client_map[30];
+	std::map<int, int> client_socket_ordered;
 
 	while (num_connections < num_neighbours)
 	{
@@ -403,7 +404,8 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 					std::string temp, word, word2;
 
 					s >> temp >> temp >> word2 >> temp >> temp >> word;
-
+					int w = std::stoi(word), w2 = std::stoi(word2);
+					client_socket_ordered[w2] = sd;
 					auto file_names = mod_get_file_names(str2);
 
 					auto x = file_size_map(str2);
@@ -413,7 +415,6 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 
 					for (auto x : files_available)
 					{
-						int w = std::stoi(word), w2 = std::stoi(word2);
 						if (file_map.find(x) == file_map.end())
 						{
 							file_map[x] = w;
@@ -454,18 +455,21 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	// std::cout << "Node number " << ID << " is still alive1\n";
 	while (!all_true(all_sent, sz))
 	{
-
-		for (int i = 0; i < sz; ++i)
+		int i = 0;
+		for (auto current_socket : client_socket_ordered)
 		{
 			ssize_t by_sent;
 			if (!all_sent[i])
 			{
 				std::string blah = std::to_string(ID) + piece_together(file_client_map[neighbour_client_number[i] - 1], '\n');
 				const char *x = blah.c_str();
-				by_sent = send(client_socket[i], x, strlen(x), 0);
+				by_sent = send(current_socket.second, x, strlen(x), 0);
+				if (by_sent != -1)
+				{
+					all_sent[i] = true;
+				}
 			}
-			if (by_sent != -1)
-				all_sent[i] = true;
+			i++;
 		}
 	}
 
@@ -535,8 +539,16 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 
 	for (auto i = file_map.begin(); i != file_map.end(); ++i)
 	{
-		std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
-		std::cout << s1;
+		if (i->second == 0)
+		{
+			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 0\n");
+			std::cout << s1;
+		}
+		else
+		{
+			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 0 at depth 1\n");
+			std::cout << s1;
+		}
 	}
 	std::cout << PORT << "        HEIHNFHOIENFUIENCIUEBNFIUEB\n\n\n";
 	// std::cout << "Node number " << ID << " is still alive\n";
