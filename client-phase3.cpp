@@ -81,11 +81,13 @@ void get_file_len(std::string file_to_send, off_t &len)
 	auto fd = open(file_to_send.c_str(), 00);
 	if (fd == -1)
 	{
+		std::cout<<"\n"<<file_to_send<<"<- Send this\n";
 		puts("Failed to open file");
 		return;
 	}
 	if (fstat(fd, &file_stat) < 0)
 	{
+		std::cout<<file_to_send;
 		puts("Failed to do file stat");
 		return;
 	}
@@ -209,7 +211,8 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		int valread;
 		msg = "Connected to " + std::to_string(ID) + " with unique-ID " + std::to_string(S_NO) + " on port " + std::to_string(PORT) + ";" + repackage(GetStdoutFromCommand("cd " + path + " ;ls -p -1v | grep -v /"), path);
 		const char *msg2 = msg.c_str();
-		char buffer[1024] = {0};
+		char buffer[BUFSIZ];
+		bzero(buffer, BUFSIZ);
 		client_socket[i] = socket(AF_INET, SOCK_STREAM, 0);
 
 		neighbour_address[i].sin_family = AF_INET;
@@ -234,10 +237,10 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	std::map<int, std::vector<std::string>> server_map;
 	for (int i = 0; i < num_neighbour; i++)
 	{
-		char buffer[1000] = {'\0'};
+		char buffer2[1000] = {'\0'};
 
-		recv(client_socket[i], buffer, 1000, 0);
-		std::string m = buffer;
+		recv(client_socket[i], buffer2, 1000, 0);
+		std::string m = buffer2;
 		std::vector<std::string> x;
 		int c = m[0] - '0';
 		m.erase(m.begin());
@@ -247,6 +250,9 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		server_map[c] = x;
 
 		std::cout << c << ", " << l << std::endl;
+		// for(auto y:server_map[c]){
+		// 	std::cout<<y<<std::endl;
+		// }
 	}
 	// server_map stores the # of files to be sent to server[i]
 	//  send loop
@@ -334,6 +340,8 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	struct sockaddr_in address;
 
 	char buffer[BUFSIZ];
+	bzero(buffer, BUFSIZ);
+
 	fd_set readfds;
 	for (int i = 0; i < max_clients; i++)
 	{
@@ -514,7 +522,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	int num_received_success = 0;
 	for (auto current_socket : client_socket_ordered)
 	{
-		file_rec_status[current_socket.first]=0;
+		file_rec_status[current_socket.first] = 0;
 	}
 	while (num_received_success < num_neighbours)
 	{
@@ -564,9 +572,11 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 					{
 						break;
 					}
+					buffer[len] = '\0';
 					fwrite(buffer, sizeof(char), len, received_file);
+					bzero(buffer, BUFSIZ);
 					remain_data -= len;
-					std::cout << "Received " << len << " bytes and we hope :- " << remain_data << " bytes\n";
+					std::cout << "Received " << len << " bytes and remaining -> " << remain_data << " bytes\n";
 				}
 				if (remain_data == 0)
 				{
