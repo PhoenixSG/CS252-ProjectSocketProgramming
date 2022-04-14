@@ -216,6 +216,7 @@ void server(int PORT, int num_neighbour)
 			}
 		}
 
+
 		// else its some IO operation on some other socket
 		for (i = 0; i < max_clients; i++)
 		{
