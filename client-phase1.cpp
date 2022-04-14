@@ -26,7 +26,7 @@ void print_file_names(char **argv)
 
 	std::string file = argv[1];
 	std::string path = argv[2];
-	std::string commd = "cd " + path + ";" + "ls -1v";
+	std::string commd = "cd " + path + ";" + "ls -1vp | grep -v /";
 	system(commd.c_str());
 }
 
