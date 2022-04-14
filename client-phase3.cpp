@@ -33,7 +33,7 @@ void print_file_names(char **argv)
 
 	std::string file = argv[1];
 	std::string path = argv[2];
-	std::string commd = "ls -1vp "+path+" | grep -v /";
+	std::string commd = "ls -1vp " + path + " | grep -v /";
 	system(commd.c_str());
 }
 
@@ -73,41 +73,6 @@ std::map<std::string, off_t> file_size_map(std::string msg)
 
 	return retval;
 }
-void get_file_len(std::string file_to_send, off_t &len)
-{
-
-	struct stat file_stat;
-
-	auto fd = open(file_to_send.c_str(), O_RDONLY);
-	if (fd == -1)
-	{
-		std::cout<<"\n"<<file_to_send<<"<- Send this\n";
-		puts("Failed to open file");
-		return;
-	}
-	if (fstat(fd, &file_stat) < 0)
-	{
-		std::cout<<file_to_send;
-		puts("Failed to do file stat");
-		return;
-	}
-	len = file_stat.st_size;
-}
-
-std::string repackage(std::string file_names, std::string path)
-{
-
-	std::vector<std::string> r;
-	tokenize(file_names, '\n', r);
-	off_t len = 0;
-	std::string retval = "";
-	for (auto x : r)
-	{
-		get_file_len(path + x, len);
-		retval += (x + "#" + std::to_string(int(len)) + "\n");
-	}
-	return retval;
-}
 
 std::string GetStdoutFromCommand(std::string cmd)
 {
@@ -126,6 +91,47 @@ std::string GetStdoutFromCommand(std::string cmd)
 		pclose(stream);
 	}
 	return data;
+}
+void get_file_len(std::string file_to_send, off_t &len)
+{
+
+	struct stat file_stat;
+
+	auto fd = open(file_to_send.c_str(), O_RDONLY);
+	if (fd == -1)
+	{
+		std::cout << "\n"
+				  << file_to_send << "<- Send this" << std::endl;
+		puts("Failed to open file");
+		// puts(GetStdoutFromCommand("pwd").c_str());
+		system(std::string("mkdir -p Fail" + file_to_send).c_str());
+		close(fd);
+		return;
+	}
+	if (fstat(fd, &file_stat) < 0)
+	{
+		std::cout << file_to_send;
+		puts("Failed to do file stat");
+		close(fd);
+		return;
+	}
+	len = file_stat.st_size;
+	close(fd);
+}
+
+std::string repackage(std::string file_names, std::string path)
+{
+
+	std::vector<std::string> r;
+	tokenize(file_names, '\n', r);
+	off_t len = 0;
+	std::string retval = "";
+	for (auto x : r)
+	{
+		get_file_len(path + x, len);
+		retval += (x + "#" + std::to_string(int(len)) + "\n");
+	}
+	return retval;
 }
 
 std::string get_hash(std::string file_name)
@@ -209,7 +215,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	{
 
 		int valread;
-		msg = "Connected to " + std::to_string(ID) + " with unique-ID " + std::to_string(S_NO) + " on port " + std::to_string(PORT) + ";" + repackage(GetStdoutFromCommand("ls -1v "+path+" | grep -v /"), path);
+		msg = "Connected to " + std::to_string(ID) + " with unique-ID " + std::to_string(S_NO) + " on port " + std::to_string(PORT) + ";" + repackage(GetStdoutFromCommand("ls -1vp " + path + " | grep -v /"), path);
 		const char *msg2 = msg.c_str();
 		char buffer[BUFSIZ];
 		bzero(buffer, BUFSIZ);
@@ -265,11 +271,12 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	for (auto x : server_map)
 	{
 		file_sent_status[x.first] = 0;
-		if(x.second.size()==0){
+		if (x.second.size() == 0)
+		{
 			successfully_sent_counter++;
 		}
 	}
-	std::cout<<"Beginning to send, success counter "<<successfully_sent_counter<<" Num Neigh "<<num_neighbour<<std::endl;
+	std::cout << "Beginning to send, success counter " << successfully_sent_counter << " Num Neigh " << num_neighbour << std::endl;
 	while (successfully_sent_counter < num_neighbour)
 	{
 		cnt = 0;
@@ -284,45 +291,57 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 				continue;
 			}
 			std::string y = x.second[file_sent_status[x.first]];
-			// get_file_len(path + y, remain_data);
+			get_file_len(path + y, remain_data);
 			fd = open((path + y).c_str(), O_RDONLY);
-			struct stat file_stat;
-			fstat(fd, &file_stat);
-			remain_data = file_stat.st_size;
-			if(fd<0){
-				std::cout<<"Failed to open file "<<path+y<<std::endl;
-			}
-			// std::cout << "\n\nOpen status"<<fd << std::endl;
-			// std::cout<<"File sent status"<<file_sent_status[x.first]<<std::endl;
-			// std::cout<<"Successfully sent counter"<<successfully_sent_counter<<std::endl;
-			// std::cout << path + y << std::endl;
-			// std::cout << "Client socket number- "<<cnt << std::endl;
 
-			while (remain_data > 0)
+			// std::cout << "\n\nOpen status" << fd << std::endl;
+			// std::cout << "File sent status" << file_sent_status[x.first] << std::endl;
+			// std::cout << "Successfully sent counter" << successfully_sent_counter << std::endl;
+			// std::cout << path + y << std::endl;
+			// std::cout << "Remaining data- " << remain_data << std::endl;
+			// std::cout << "Client socket number- " << cnt << std::endl;
+
+			auto start = std::chrono::system_clock::now(); // timer begin
+			auto now = start;
+			std::chrono::duration<double> diff = now - start;
+			double time;
+			while (true)
 			{
-				sent_bytes = sendfile(client_socket[cnt], fd, (off_t *)&offset, remain_data);
-				if (sent_bytes <= 0)
+				while (remain_data > 0)
 				{
-					// std::cout << "0. Client could not send"<<std::endl;
+					sent_bytes = sendfile(client_socket[cnt], fd, (off_t *)&offset, remain_data);
+					if (sent_bytes <= 0)
+					{
+						// std::cout << "Client could not send" << std::endl;
+						break;
+					}
+					remain_data -= sent_bytes;
+					std::cout << "Sent " << sent_bytes << " bytes from file's data, offset is now : " << offset << " and remaining data = " << remain_data << "\n";
+				}
+				now = std::chrono::system_clock::now(); // timer end
+				diff = now - start;
+				time = diff.count();
+				if (time > 0.1)
+				{
 					break;
 				}
-				remain_data -= sent_bytes;
-				std::cout << "2. Client sent " << sent_bytes << " bytes from file's data, offset is now : " << offset << " and remaining data = " << remain_data << "\n";
 			}
 			if (remain_data == 0)
 			{
 				file_sent_status[x.first]++;
+				std::cout << "Sent a FILE " << y << std::endl;
 			}
 			if (file_sent_status[x.first] == x.second.size())
 			{
 				successfully_sent_counter++;
+				std::cout << "Sent all to one Server " << successfully_sent_counter << std::endl;
 			}
 			++cnt;
 			close(fd);
 		}
 	}
 
-	std::cout << S_NO << "    HEIHNFHOIENFUIENCIUEBNFIUEB"<<std::endl;
+	std::cout << S_NO << "    HEIHNFHOIENFUIENCIUEBNFIUEB" << std::endl;
 }
 
 void display(std::vector<int> &neighbour_client_number)
@@ -384,7 +403,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 		perror("bind failed");
 		exit(EXIT_FAILURE);
 	}
-	if (listen(master_socket, 3) < 0)
+	if (listen(master_socket, 10) < 0)
 	{
 		perror("listen");
 		exit(EXIT_FAILURE);
@@ -529,113 +548,6 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 			i++;
 		}
 	}
-	// std::cout << "Node number " << ID << " is still alive2\n";
-	std::string rmdir = "rm -rf " + path + "Downloaded";
-	system(rmdir.c_str());
-	std::string mkdir = "mkdir -p " + path + "Downloaded";
-	system(mkdir.c_str());
-	// receive loop
-	std::map<int, int> file_rec_status;
-	int num_received_success = 0;
-	for (auto current_socket : client_socket_ordered)
-	{
-		if(file_client_map[current_socket.first].size()==0){
-			num_received_success++;
-		}
-		file_rec_status[current_socket.first] = 0;
-	}
-	std::set<int> sockets_alive;
-	fd_set connected_fds;
-
-	FD_ZERO(&connected_fds);
-	max_sd = 0;
-	for (auto current_socket : client_socket_ordered)
-	{
-		sd = current_socket.second;
-		if (sd > 0)
-		{
-			sockets_alive.insert(sd);
-			FD_SET(sd, &connected_fds);
-		}
-		else
-		{
-			std::string mkdir = "mkdir -p SOCKET_CLOSED";
-			system(mkdir.c_str());
-		}
-		if (sd > max_sd)
-			max_sd = sd;
-	}
-	assert(sockets_alive.size()==num_neighbours);
-	fd_set total_set = connected_fds;
-	while (num_received_success < num_neighbours)
-	{
-		connected_fds = total_set;
-		activity = select(max_sd + 1, &connected_fds, NULL, NULL, NULL);
-
-		if ((activity < 0) && (errno != EINTR))
-		{
-			std::cout<<"select error"<<std::endl;
-		}
-
-		for (auto current_socket : client_socket_ordered)
-		{
-			if (FD_ISSET(current_socket.second, &connected_fds))
-			{
-				if (file_rec_status[current_socket.first] == file_client_map[current_socket.first].size())
-				{
-					break;
-				}
-				std::string file_name = file_client_map[current_socket.first][file_rec_status[current_socket.first]];
-				// receiving data.
-				/// maintain a 2d array which keeps track of what is received. In order receiving.
-				// Variable which maintains the file number till where we have received, for each client.
-				// int array of num_neighbour
-				ssize_t len;
-				int sent_bytes = 0;
-				off_t remain_data;
-				std::cout<<"ACTIVITY ON- "<<current_socket.first<<" with file"<<file_name<<std::endl;
-				FILE *received_file = fopen((path + "Downloaded/" + file_name).c_str(), "w");
-
-				remain_data = file_sz_map[file_name];
-
-				while (remain_data > 0)
-				{
-					len = recv(current_socket.second, buffer, BUFSIZ, 0);
-					if (len < 0)
-					{
-						std::string mkdir = "mkdir -p " + path + "Error"+std::to_string(ID)+file_name;
-						system(mkdir.c_str());
-						fclose(received_file);
-						std::cout<<"Error while receiving "<<file_name<<std::endl;
-						break;
-					}
-					if(len==0){
-						std::string mkdir = "mkdir -p " + path + "AHHHHHHHHH"+std::to_string(ID)+file_name;
-						system(mkdir.c_str());
-						fclose(received_file);
-						std::cout<<"Error while receiving "<<file_name<<std::endl;
-						break;
-					}
-					buffer[len] = '\0';
-					fwrite(buffer, sizeof(char), len, received_file);
-					bzero(buffer, BUFSIZ);
-					remain_data -= len;
-					std::cout << "Received " << len << " bytes and remaining -> " << remain_data << " bytes\n";
-				}
-				if (remain_data == 0)
-				{
-					file_rec_status[current_socket.first]++;
-					printf("Received a file\n\n");
-				}
-				if (file_rec_status[current_socket.first] == file_client_map[current_socket.first].size())
-				{
-					num_received_success++;
-				}
-				fclose(received_file);
-			}
-		}
-	}
-
 	for (auto x : files_to_download)
 	{
 		if (file_map.find(x) == file_map.end())
@@ -662,7 +574,126 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 			std::cout << s1;
 		}
 	}
-	std::cout << PORT << "        HEIHNFHOIENFUIENCIUEBNFIUEB\n\n\n";
+	// std::cout << "Node number " << ID << " is still alive2\n";
+	std::string rmdir = "rm -rf " + path + "Downloaded";
+	system(rmdir.c_str());
+	std::string mkdir = "mkdir -p " + path + "Downloaded";
+	system(mkdir.c_str());
+	// receive loop
+	std::map<int, int> file_rec_status;
+	int num_received_success = 0;
+	for (auto current_socket : client_socket_ordered)
+	{
+		if (file_client_map[current_socket.first].size() == 0)
+		{
+			num_received_success++;
+		}
+		file_rec_status[current_socket.first] = 0;
+	}
+	std::set<int> sockets_alive;
+	fd_set connected_fds;
+
+	FD_ZERO(&connected_fds);
+	max_sd = 0;
+	for (auto current_socket : client_socket_ordered)
+	{
+		sd = current_socket.second;
+		if (sd > 0)
+		{
+			sockets_alive.insert(sd);
+			FD_SET(sd, &connected_fds);
+		}
+		else
+		{
+			std::string mkdir = "mkdir -p SOCKET_CLOSED";
+			system(mkdir.c_str());
+		}
+		if (sd > max_sd)
+			max_sd = sd;
+	}
+	assert(sockets_alive.size() == num_neighbours);
+	fd_set total_set;
+	FD_ZERO(&total_set);
+	total_set = connected_fds;
+	struct timeval time_out;
+	time_out.tv_usec = 100000;
+	while (num_received_success < num_neighbours)
+	{
+		std::cout << "I am alive" << std::endl;
+		connected_fds = total_set;
+		activity = select(max_sd + 1, &connected_fds, NULL, NULL, NULL);
+
+		if ((activity < 0) && (errno != EINTR))
+		{
+			std::cout << "select error" << std::endl;
+		}
+
+		for (auto current_socket : client_socket_ordered)
+		{
+			if (FD_ISSET(current_socket.second, &connected_fds))
+			{
+				if (file_rec_status[current_socket.first] == file_client_map[current_socket.first].size())
+				{
+					break;
+				}
+				std::string file_name = file_client_map[current_socket.first][file_rec_status[current_socket.first]];
+				// receiving data.
+				/// maintain a 2d array which keeps track of what is received. In order receiving.
+				// Variable which maintains the file number till where we have received, for each client.
+				// int array of num_neighbour
+				std::cout << "ACTIVITY ON- " << current_socket.first << " with file" << file_name << std::endl;
+				std::cout << "Current Status " << file_rec_status[current_socket.first] << std::endl;
+				std::cout << "Total Required " << file_client_map[current_socket.first].size() << std::endl;
+				ssize_t len;
+				int sent_bytes = 0;
+				off_t remain_data;
+				FILE *received_file = fopen((path + "Downloaded/" + file_name).c_str(), "w");
+
+				remain_data = file_sz_map[file_name];
+				std::cout << "Size of file " << remain_data << std::endl;
+
+				while (remain_data > 0)
+				{
+					len = recv(current_socket.second, buffer, BUFSIZ, 0);
+					if (len < 0)
+					{
+						std::string mkdir = "mkdir -p " + path + "Error" + std::to_string(ID) + file_name;
+						system(mkdir.c_str());
+						fclose(received_file);
+						std::cout << "Error while receiving " << file_name << std::endl;
+						break;
+					}
+					if (len == 0)
+					{
+						std::string mkdir = "mkdir -p " + path + "AHHHHHHHHH" + std::to_string(ID) + file_name;
+						system(mkdir.c_str());
+						fclose(received_file);
+						std::cout << "Error while receiving " << file_name << std::endl;
+						break;
+					}
+					buffer[len] = '\0';
+					fwrite(buffer, sizeof(char), len, received_file);
+					bzero(buffer, BUFSIZ);
+					remain_data -= len;
+					std::cout << "Received " << len << " bytes and remaining -> " << remain_data << " bytes\n";
+				}
+				if (remain_data == 0)
+				{
+					file_rec_status[current_socket.first]++;
+					printf("Received a file\n\n");
+				}
+				if (file_rec_status[current_socket.first] == file_client_map[current_socket.first].size())
+				{
+					num_received_success++;
+					printf("One server done %d\n\n", current_socket.first);
+				}
+				fclose(received_file);
+			}
+		}
+	}
+
+	std::cout << PORT << "        HEIHNFHOIENFUIENCIUEBNFIUEB" << std::endl
+			  << std::endl;
 	// std::cout << "Node number " << ID << " is still alive\n";
 }
 
