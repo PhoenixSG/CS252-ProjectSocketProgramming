@@ -27,7 +27,7 @@ void print_file_names(char **argv)
 
 	std::string file = argv[1];
 	std::string path = argv[2];
-	std::string commd = "cd " + path + ";" + "ls -1v";
+	std::string commd = "cd " + path + ";" + "ls -1vp | grep -v /";
 	system(commd.c_str());
 }
 
@@ -103,7 +103,54 @@ std::string generate_message(std::vector<std::string> files, std::string ID)
 	return retval;
 }
 
-void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port, std::vector<int> &neighbour_client_number, int PORT, int ID, std::string path)
+bool contains_colon (std::string s){
+	if (s.find(':') != std::string::npos)
+		return true;
+	else
+		return false; 
+}
+
+void extract_info (std::vector<std::string> svs, std::vector<std::string> &files_to_download){
+	
+	
+	std::map <std::pair<int, int>, std::vector<std::string>> m;
+	std::vector<std::string> temp;
+	int sz = svs.size();
+	int i = 0;
+	for(; i < sz; ++i){
+		std::string x = svs[i];
+		if(x.empty())
+	 		continue;
+		if(contains_colon(x)){
+			std::pair<int, int> p;
+	 		p.first = int(x[0]) - '0';//p.first is the depth
+	 		p.second = int(x[2]) - '0';
+			int j = i + 1;
+			for(; (j < sz) && !contains_colon(svs[j]); ++j){
+				temp.push_back(svs[j]);
+			}
+			m[p] = intersection(temp, files_to_download);
+			i = j - 1;
+			temp.clear();
+		}
+	}
+	for(auto x : m){
+		int depth = x.first.first;
+		int client_no = x.first.second;
+		for(auto y : x.second){
+			std::cout << "Found " << y << " at " << client_no << " with MD5 0 at depth " << depth
+			<< std::endl; 
+		}
+	}
+}
+
+
+
+
+
+void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port, 
+			std::vector<int> &neighbour_client_number, int PORT, int ID, 
+			std::string path, std::vector<std::string> &files_to_download)
 {
 	struct sockaddr_in neighbour_address[num_neighbour];
 	int client_socket[num_neighbour];
@@ -114,7 +161,8 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	{
 
 		int valread;
-		std::string msg = "Connected to " + std::to_string(ID) + " with unique-ID " + std::to_string(S_NO) + " on port " + std::to_string(PORT) + ";" + GetStdoutFromCommand("cd " + path + " ;ls -p | grep -v /") + ";";
+		std::string msg = "Connected to " + std::to_string(ID) + " with unique-ID " + std::to_string(S_NO) + " on port " + std::to_string(PORT) + ";" + 
+		GetStdoutFromCommand("cd " + path + " ;ls -1vp | grep -v /");
 		const char *msg2 = msg.c_str();
 		char buffer[1024] = {0};
 		client_socket[i] = socket(AF_INET, SOCK_STREAM, 0);
@@ -138,8 +186,12 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	for (int i = 0; i < num_neighbour; i++)
 	{
 		read(client_socket[i], buffer, 1025);
+		std::string buf = buffer;
+		//std::cout << buf;
+		std::vector<std::string> pieces;
+		tokenize(buf,'\n',pieces);
 		server_data[i] = buffer;
-		printf("\nHELLO THERE!!\n");
+		//std::cout << ID << " " << "yo\n";
 		bzero(buffer, 1025);
 
 		//so now I will dump all the info to the client side and then process it all here itself.
@@ -147,13 +199,13 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 
 
 		// need to process the string to extract the info about files and stuff
+		extract_info(pieces, files_to_download);
 	}
-	// for (int i = 0; i < num_neighbour; i++)
-	// {
-	// }
+	std::cout << ID << " above---------------------------------------------------\n";
+	
 }
 
-void server(int PORT, std::vector<std::string> files_to_download, int num_neighbours)
+void server(int PORT, std::vector<std::string> files_to_download, int num_neighbours, int ID, std::string &path)
 {
 	int opt = 1;
 	int master_socket, addrlen, new_socket, client_socket[30], max_clients = 30, activity, i, valread, sd;
@@ -276,9 +328,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 						}
 					}
 
-					auto prnt = process(str) + "\n"; // + generate_message(files_available, word);
-
-					// std::cout << prnt;
+					auto prnt = process(str) + "\n"; 
 					m[atoi(word2.c_str())] = prnt;
 					files_with_client[atoi(word2.c_str())] = get_file_names_as_string(str2);
 					// word2 has the client number. We can store the files it has in a map.
@@ -289,8 +339,11 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	std::string client_files_info, client_data[num_neighbours];
 	for (auto i = files_with_client.begin(); i != files_with_client.end(); i++)
 	{
-		client_files_info += i->first + ":" + i->second + ";";
+		client_files_info += "2:" + std::to_string(i->first) + "\n" + i->second;
 	}
+	std::string own_files = "1:" + std::to_string(ID) + "\n" +
+	GetStdoutFromCommand("cd " + path + " ;ls -1vp | grep -v /");
+	client_files_info += own_files;
 	// By now, we know the files with each neighbour and also know the files wanted by us.
 	// We somehow need to convey one of these to all our neighbours.
 	// If in the same connection, we convey to the neighbour, which files we need, then the neighbour
@@ -303,7 +356,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	// clients themselves, but will see about that later.
 	bool counter[num_neighbours] = {};
 	int count = 0;
-
+	/*
 	for (auto x : m)
 	{
 		std::cout << x.second;
@@ -329,7 +382,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 			std::cout << s1;
 		}
 	}
-
+	*/
 	while (count < num_neighbours)
 	{
 		for (int i = 0; i < num_neighbours; i++)
@@ -370,7 +423,7 @@ int main(int argc, char **argv)
 
 	////////////////////Processing
 
-	print_file_names(argv);
+	//print_file_names(argv);
 
 	std::string file = argv[1];
 	std::string path = argv[2];
@@ -423,10 +476,11 @@ int main(int argc, char **argv)
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	std::thread t1(server, PORT, std::ref(files_to_download), num_neighbour);
+	std::thread t1(server, PORT, std::ref(files_to_download), num_neighbour, ID, std::ref(path));
 
 	std::thread t2(client, S_NO, num_neighbour, std::ref(neighbour_client_port),
-				   std::ref(neighbour_client_number), PORT, ID, std::ref(path));
+				   std::ref(neighbour_client_number), PORT, ID, std::ref(path),
+				   std::ref(files_to_download));
 
 	t1.join();
 	t2.join();
