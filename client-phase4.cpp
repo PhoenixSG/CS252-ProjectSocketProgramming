@@ -110,11 +110,27 @@ bool contains_colon (std::string s){
 		return false; 
 }
 
+std::pair<int, int> minimum(std::pair<int, int> lhs, std::pair<int, int> rhs) {
+    if (lhs.first < rhs.first) {
+        return lhs;
+    }
+    else if (lhs.first == rhs.first && lhs.second < rhs.second) {
+        return lhs;
+    }
+    else {
+        return rhs;
+    }
+}
+
+
+
+
 void extract_info (std::vector<std::string> svs, std::vector<std::string> &files_to_download){
 	
 	
 	std::map <std::pair<int, int>, std::vector<std::string>> m;
 	std::vector<std::string> temp;
+	std::map <std::string, std::pair<int, int>> file_map;
 	int sz = svs.size();
 	int i = 0;
 	for(; i < sz; ++i){
@@ -124,24 +140,46 @@ void extract_info (std::vector<std::string> svs, std::vector<std::string> &files
 		if(contains_colon(x)){
 			std::pair<int, int> p;
 	 		p.first = int(x[0]) - '0';//p.first is the depth
-	 		p.second = int(x[2]) - '0';
+	 		p.second = std::stoi(x.substr(x.find(":") + 1));
 			int j = i + 1;
 			for(; (j < sz) && !contains_colon(svs[j]); ++j){
 				temp.push_back(svs[j]);
 			}
 			m[p] = intersection(temp, files_to_download);
+			for(std::string file : m[p]){
+				if (file_map.find(file) == file_map.end())
+				{
+					file_map[file] = p;
+				}
+				else
+				{
+					file_map[file] = minimum(p, file_map[file]);
+				}
+			}
 			i = j - 1;
 			temp.clear();
 		}
 	}
-	for(auto x : m){
-		int depth = x.first.first;
-		int client_no = x.first.second;
-		for(auto y : x.second){
-			std::cout << "Found " << y << " at " << client_no << " with MD5 0 at depth " << depth
-			<< std::endl; 
-		}
+
+	for(auto x : file_map){
+		int depth = x.second.first;
+		int client_sno = x.second.second;
+		
+		std::cout << "Found " << x.first << " at " << client_sno << " with MD5 0 at depth " << depth
+		<< std::endl; 
+	
 	}
+
+
+
+	// for(auto x : m){
+	// 	int depth = x.first.first;
+	// 	int client_sno = x.first.second;
+	// 	for(auto y : x.second){
+	// 		std::cout << "Found " << y << " at " << client_sno << " with MD5 0 at depth " << depth
+	// 		<< std::endl; 
+	// 	}
+	// }
 }
 
 
@@ -201,11 +239,11 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		// need to process the string to extract the info about files and stuff
 		extract_info(pieces, files_to_download);
 	}
-	std::cout << ID << " above---------------------------------------------------\n";
+	//std::cout << ID << " above---------------------------------------------------\n";
 	
 }
 
-void server(int PORT, std::vector<std::string> files_to_download, int num_neighbours, int ID, std::string &path)
+void server(int PORT, std::vector<std::string> files_to_download, int num_neighbours, int ID, std::string &path, int S_NO)
 {
 	int opt = 1;
 	int master_socket, addrlen, new_socket, client_socket[30], max_clients = 30, activity, i, valread, sd;
@@ -330,7 +368,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 
 					auto prnt = process(str) + "\n"; 
 					m[atoi(word2.c_str())] = prnt;
-					files_with_client[atoi(word2.c_str())] = get_file_names_as_string(str2);
+					files_with_client[std::stoi(word)] = get_file_names_as_string(str2);
 					// word2 has the client number. We can store the files it has in a map.
 				}
 			}
@@ -341,7 +379,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	{
 		client_files_info += "2:" + std::to_string(i->first) + "\n" + i->second;
 	}
-	std::string own_files = "1:" + std::to_string(ID) + "\n" +
+	std::string own_files = "1:" + std::to_string(S_NO) + "\n" +
 	GetStdoutFromCommand("cd " + path + " ;ls -1vp | grep -v /");
 	client_files_info += own_files;
 	// By now, we know the files with each neighbour and also know the files wanted by us.
@@ -476,7 +514,7 @@ int main(int argc, char **argv)
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	std::thread t1(server, PORT, std::ref(files_to_download), num_neighbour, ID, std::ref(path));
+	std::thread t1(server, PORT, std::ref(files_to_download), num_neighbour, ID, std::ref(path), S_NO);
 
 	std::thread t2(client, S_NO, num_neighbour, std::ref(neighbour_client_port),
 				   std::ref(neighbour_client_number), PORT, ID, std::ref(path),
