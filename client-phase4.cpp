@@ -94,6 +94,20 @@ std::vector<std::string> intersection(std::vector<std::string> &v1,
 	return v3;
 }
 
+std::vector<std::string> set_diff(std::vector<std::string> v1,
+										std::vector<std::string> v2)
+{
+	std::vector<std::string> v3;
+
+	std::sort(v1.begin(), v1.end());
+	std::sort(v2.begin(), v2.end());
+
+	std::set_difference(v1.begin(), v1.end(),
+						v2.begin(), v2.end(),
+						back_inserter(v3));
+	return v3;
+}
+
 std::string generate_message(std::vector<std::string> files, std::string ID)
 {
 
@@ -103,9 +117,9 @@ std::string generate_message(std::vector<std::string> files, std::string ID)
 	return retval;
 }
 
-bool contains_colon(std::string s)
+bool contains_char(std::string s, char c)
 {
-	if (s.find(':') != std::string::npos)
+	if (s.find(c) != std::string::npos)
 		return true;
 	else
 		return false;
@@ -132,28 +146,48 @@ std::pair<int, int> minimum(std::pair<int, int> lhs, std::pair<int, int> rhs)
 	}
 }
 
-void extract_info(std::vector<std::string> svs, 
-std::vector<std::string> &files_to_download, 
-std::map<std::string, std::pair<int, int>> &fm)
+void extract_info(std::vector<std::string> svs,
+				  std::vector<std::string> &files_to_download,
+				  std::map<std::string, std::pair<int, int>> &fm, std::vector<std::vector<int>> &svt)
 {
 
 	std::map<std::pair<int, int>, std::vector<std::string>> m;
 	std::vector<std::string> temp;
 	// std::map<std::string, std::pair<int, int>> fm;
 	int sz = svs.size();
+	// std::cout << svs[sz-1] << std::endl;
+	std::vector<std::string> temporary;
+	tokenize(svs[sz - 1], ',', temporary);
+	std::vector<int> tmp;
+	for (auto elem : temporary)
+	{
+		tmp.push_back(std::stoi(elem));
+	}
+	svt.push_back(tmp);
 	int i = 0;
 	for (; i < sz; ++i)
 	{
 		std::string x = svs[i];
 		if (x.empty())
 			continue;
-		if (contains_colon(x))
+		// if (contains_char(x, ',')){
+		// 	std::cout << x << std::endl;
+		// 	std::vector<std::string> temp;
+		// 	tokenize(x,',',temp);
+		// 	std::vector<int> tmp;
+		// 	for(auto elem : temp){
+		// 		tmp.push_back(std::stoi(elem));
+		// 	}
+		// 	svt.push_back(tmp);
+		// 	//return;
+		// }
+		if (contains_char(x, ':'))
 		{
 			std::pair<int, int> p;
 			p.first = int(x[0]) - '0'; // p.first is the depth
 			p.second = std::stoi(x.substr(x.find(":") + 1));
 			int j = i + 1;
-			for (; (j < sz) && !contains_colon(svs[j]); ++j)
+			for (; (j < sz) && !contains_char(svs[j], ':') && !contains_char(svs[j], ','); ++j)
 			{
 				temp.push_back(svs[j]);
 			}
@@ -166,11 +200,11 @@ std::map<std::string, std::pair<int, int>> &fm)
 				}
 				else
 				{
-					//std::cout << "Entered            ";
-					//display(fm[file]);
+					// std::cout << "Entered            ";
+					// display(fm[file]);
 					fm[file] = minimum(p, fm[file]);
-					//std::cout << "Exited            ";
-					//display(fm[file]);
+					// std::cout << "Exited            ";
+					// display(fm[file]);
 				}
 			}
 			i = j - 1;
@@ -195,6 +229,14 @@ std::map<std::string, std::pair<int, int>> &fm)
 	// 		<< std::endl;
 	// 	}
 	// }
+}
+
+std::vector<std::string> get_keys(std::map<std::string, std::pair<int, int>> &fm)
+{
+	std::vector<std::string> retval;
+	for (auto x : fm)
+		retval.push_back(x.first);
+	return retval;
 }
 
 void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port,
@@ -233,6 +275,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	}
 	std::string server_data[num_neighbour];
 	std::map<std::string, std::pair<int, int>> fm;
+	std::vector<std::vector<int>> svt;
 	for (int i = 0; i < num_neighbour; i++)
 	{
 		read(client_socket[i], buffer, 1025);
@@ -248,8 +291,20 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		// Will also be sensible as I will all the info about both 1 depth and 2 depth neighbour.
 
 		// need to process the string to extract the info about files and stuff
-		extract_info(pieces, files_to_download, fm);
+		extract_info(pieces, files_to_download, fm, svt);
 	}
+	std::sort(svt.begin(), svt.end(),
+			  [](const std::vector<int> &a, const std::vector<int> &b)
+			  {
+				  return a[0] < b[0];
+			  });
+
+	for (auto x : svt)
+	{
+
+		std::cout << "Connected to " << x[0] << " with unique-ID " << x[1] << " on port " << x[2] << std::endl;
+	}
+
 	for (auto x : fm)
 	{
 		int depth = x.second.first;
@@ -258,7 +313,14 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		std::cout << "Found " << x.first << " at " << client_sno << " with MD5 0 at depth " << depth
 				  << std::endl;
 	}
-	// std::cout << ID << " above---------------------------------------------------\n";
+	auto vecst = set_diff(files_to_download, get_keys(fm));
+	for (auto x : vecst)
+	{
+		std::cout << "Found " << x << " at 0 with MD5 0 at depth 0"
+				  << std::endl;
+	}
+
+// std::cout << ID << " above---------------------------------------------------\n";
 }
 
 void server(int PORT, std::vector<std::string> files_to_download, int num_neighbours, int ID, std::string &path, int S_NO)
@@ -400,6 +462,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	std::string own_files = "1:" + std::to_string(S_NO) + "\n" +
 							GetStdoutFromCommand("cd " + path + " ;ls -1vp | grep -v /");
 	client_files_info += own_files;
+	client_files_info += (std::to_string(ID) + "," + std::to_string(S_NO) + "," + std::to_string(PORT));
 	// By now, we know the files with each neighbour and also know the files wanted by us.
 	// We somehow need to convey one of these to all our neighbours.
 	// If in the same connection, we convey to the neighbour, which files we need, then the neighbour
@@ -479,7 +542,7 @@ int main(int argc, char **argv)
 	// display(minimum(std::make_pair(2,507), std::make_pair(1,8507)));
 	////////////////////Processing
 
-	// print_file_names(argv);
+	print_file_names(argv);
 
 	std::string file = argv[1];
 	std::string path = argv[2];
