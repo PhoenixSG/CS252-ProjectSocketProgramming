@@ -6,5 +6,6 @@ client-phase2
 client-phase3
 client-phase4
 client-phase5
+*.o
 tc*/files/client*/Downloaded
 sample-data
