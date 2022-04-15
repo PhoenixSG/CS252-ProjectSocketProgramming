@@ -204,14 +204,6 @@ void clean_map (std::map<int, std::vector<std::string>> &server_map){
 
 
 }*/
-std::string extend_30(std::string input)
-{
-	while (input.length() < 30)
-	{
-		input = input +";";
-	}
-	return input;
-}
 
 // void display(std::vector<int> &neighbour_client_number)
 // {
@@ -305,6 +297,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		file_sent_status[x.first] = 0;
 		if (x.second.size() == 0)
 		{
+			close(client_socket[cnt]);
 			successfully_sent_counter++;
 		}
 		cnt++;
@@ -313,22 +306,18 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	bzero(buffer, BUFSIZ);
 	while (successfully_sent_counter < num_neighbour)
 	{
-		for (int i = 0; i < num_neighbour; i++)
+		cnt = 0;
+		for (auto x : server_map)
 		{
 			ssize_t len;
 			int offset = 0, sent_bytes = 0;
 			off_t remain_data;
 			if (x.second.size() == file_sent_status[x.first])
 			{
+				++cnt;
 				continue;
 			}
-
-			ssize_t len;
-			int fd, offset = 0, sent_bytes = 0;
-			off_t remain_data;
-			client[i] = socket(AF_INET, SOCK_STREAM, 0);
-
-			std::string y = server_map[i][file_sent_status[i]];
+			std::string y = x.second[file_sent_status[x.first]];
 			get_file_len(path + y, remain_data);
 			int size_of_file = remain_data;
 			std::ifstream fd;
@@ -576,14 +565,12 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 				by_sent = send(current_socket.second, x, strlen(x), 0);
 				if (by_sent != -1)
 				{
-					// close(current_socket.second);
 					all_sent[i] = true;
 				}
 			}
 			i++;
 		}
 	}
-
 	for (auto x : files_to_download)
 	{
 		if (file_map.find(x) == file_map.end())
@@ -605,9 +592,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 	// receive loop
 	std::map<int, int> file_rec_status;
 	int num_received_success = 0;
-	// file_client_map contains vector of string of files at the index of the client number
-	//	file_map contains the index as filename and the value as the client number. 0 if not found.
-	// file_rec_status contains index of client number and the value as the number of files received
+
 	for (auto current_socket : client_socket_ordered)
 	{
 		if (file_client_map[current_socket.first].size() == 0)
