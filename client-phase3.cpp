@@ -335,6 +335,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 			while (remain_data > 0)
 			{
 				bzero(buffer, BUFSIZ);
+				fd.seekg(size_of_file-remain_data);
 				fd.read(buffer, BUFSIZ);
 				// sent_bytes = sendfile(client_socket[cnt], fd, (off_t *)&offset, remain_data);
 				sent_bytes = send(client_socket[cnt], buffer, BUFSIZ, 0);
@@ -679,11 +680,13 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 					{
 						ack = send(current_socket.second, file_name.c_str(), strlen(file_name.c_str()), 0);
 					}
-					char *buffer_new = new char[remain_data];
-					bzero(buffer_new, remain_data);
-					strncpy(buffer_new, buffer, remain_data);
-					// received_file << buffer_new;
-					received_file << std::string(buffer_new).substr(0,remain_data);
+					// char *buffer_new = new char[remain_data];
+					// bzero(buffer_new, remain_data);
+					// strncpy(buffer_new, buffer, remain_data);
+					// received_file.write(buffer_new, remain_data);
+					received_file.write(buffer, remain_data);
+
+					// received_file << std::string(buffer_new).substr(0,remain_data);
 					file_rec_status[current_socket.first]++;
 					// std::cout << "Received a file. Also acked" << std::endl << std::endl;
 					remain_data = 0;
@@ -692,8 +695,8 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 				{
 					remain_data -= len;
 					//till here buffer is raw.
-					// received_file << buffer;
-					received_file << std::string(buffer).substr(0,BUFSIZ);
+					received_file.write(buffer, len);
+					// received_file << std::string(buffer).substr(0,BUFSIZ);
 				}
 				bzero(buffer, BUFSIZ);
 				// std::cout << "Received " << len << " bytes and remaining -> " << remain_data << " bytes" << std::endl;
