@@ -112,7 +112,7 @@ void get_file_len(std::string file_to_send, off_t &len)
 		// std::cout << "\n"<< file_to_send << "<- Send this" << std::endl;
 		// puts("Failed to open file");
 		// puts(GetStdoutFromCommand("pwd").c_str());
-		system(std::string("mkdir -p Fail" + file_to_send).c_str());
+		// system(std::string("mkdir -p Fail" + file_to_send).c_str());
 		close(fd);
 		return;
 	}
@@ -187,10 +187,14 @@ std::vector<std::string> intersection(std::vector<std::string> &v1, std::vector<
 
 	return v3;
 }
-std::vector<std::string> intersection_set(std::vector<std::string> &v1, std::set<std::string> &v2)
+std::vector<std::string> intersection_set(std::vector<std::string> &v1, std::set<std::string> &v4)
 {
 
 	std::vector<std::string> v3;
+	std::vector<std::string> v2;
+	for(auto x:v4){
+		v2.push_back(x);
+	}
 	std::sort(v1.begin(), v1.end());
 	std::sort(v2.begin(), v2.end());
 	std::set_intersection(v1.begin(), v1.end(), v2.begin(), v2.end(), back_inserter(v3));
@@ -297,14 +301,14 @@ void extract_info(std::vector<std::string> svs,
 	// std::map<std::string, std::pair<int, int>> fm;
 	int sz = svs.size();
 	// std::cout << svs[sz-1] << std::endl;
-	std::vector<std::string> temporary;
-	tokenize(svs[sz - 1], ',', temporary);
-	std::vector<int> tmp;
-	for (auto elem : temporary)
-	{
-		tmp.push_back(std::stoi(elem));
-	}
-	svt.push_back(tmp);
+	// std::vector<std::string> temporary;
+	// tokenize(svs[sz - 1], ',', temporary);
+	// std::vector<int> tmp;
+	// for (auto elem : temporary)
+	// {
+	// 	tmp.push_back(std::stoi(elem));
+	// }
+	// svt.push_back(tmp);
 	int i = 0;
 	for (; i < sz; ++i)
 	{
@@ -585,6 +589,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 			}
 			int valread;
 			msg = *(x.second.begin());
+			std::cout<<msg<<std::endl;
 			const char *msg2 = msg.c_str();
 			int sd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -645,7 +650,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 							received_file.write(buffer, remain_data);
 							x.second.erase(x.second.find(msg));
 							// received_file << std::string(buffer_new).substr(0,remain_data);
-							// std::cout << "Received a file. Also acked" << std::endl << std::endl;
+							std::cout << "NEW Received a file. Also acked" << std::endl << std::endl;
 							remain_data = 0;
 						}
 						else
@@ -679,7 +684,7 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		if (client_sno != 0)
 		{
 			// actually found.
-			std::cout << "Found " << x.first << " at " << client_sno << " with MD5 0 at depth " << depth << std::endl;
+			std::cout << "Found " << x.first << " at " << client_sno << " with MD5 "+get_hash(path+"Downloaded/"+x.first)+" at depth " << depth << std::endl;
 		}
 		else
 		{
@@ -834,7 +839,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 					}
 
 					auto prnt = process(str) + "\n";
-					files_with_client[std::stoi(word)] = get_file_names_as_string(str2);
+					files_with_client[w] = get_file_names_as_string(str2);
 					m[atoi(word2.c_str())] = prnt;
 				}
 			}
@@ -1240,7 +1245,7 @@ int main(int argc, char **argv)
 
 	/////////////////////////////////////////////////////////////////////////////////
 
-	std::thread t1(server, PORT, std::ref(files_to_download), num_neighbour, ID, std::ref(path), S_NO, std::ref(neighbour_client_port));
+	std::thread t1(server, PORT, std::ref(files_to_download), num_neighbour,std::ref(neighbour_client_number), ID, std::ref(path), S_NO, std::ref(neighbour_client_port));
 
 	std::thread t2(client, S_NO, num_neighbour, std::ref(neighbour_client_port),
 				   std::ref(neighbour_client_number), PORT, ID, std::ref(path),
