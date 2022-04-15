@@ -682,7 +682,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 					char *buffer_new = new char[remain_data];
 					bzero(buffer_new, remain_data);
 					strncpy(buffer_new, buffer, remain_data);
-					received_file << buffer_new;
+					received_file << std::string(buffer_new).substr(0,remain_data);
 					file_rec_status[current_socket.first]++;
 					// std::cout << "Received a file. Also acked" << std::endl << std::endl;
 					remain_data = 0;
@@ -690,7 +690,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 				else
 				{
 					remain_data -= len;
-					received_file << buffer;
+					received_file << std::string(buffer).substr(0,BUFSIZ);
 				}
 				bzero(buffer, BUFSIZ);
 				// std::cout << "Received " << len << " bytes and remaining -> " << remain_data << " bytes" << std::endl;
