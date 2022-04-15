@@ -305,18 +305,17 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		std::cout << "Connected to " << x[0] << " with unique-ID " << x[1] << " on port " << x[2] << std::endl;
 	}
 
+	auto vecst = set_diff(files_to_download, get_keys(fm));
+	for (auto x : vecst)
+	{
+		fm[x] = std::make_pair(0,0);
+	}
 	for (auto x : fm)
 	{
 		int depth = x.second.first;
 		int client_sno = x.second.second;
 
 		std::cout << "Found " << x.first << " at " << client_sno << " with MD5 0 at depth " << depth
-				  << std::endl;
-	}
-	auto vecst = set_diff(files_to_download, get_keys(fm));
-	for (auto x : vecst)
-	{
-		std::cout << "Found " << x << " at 0 with MD5 0 at depth 0"
 				  << std::endl;
 	}
 
