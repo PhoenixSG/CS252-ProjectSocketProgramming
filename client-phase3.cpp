@@ -304,6 +304,9 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 	}
 	// std::cout << "Beginning to send, success counter " << successfully_sent_counter << " Num Neigh " << num_neighbour << std::endl;
 	bzero(buffer, BUFSIZ);
+	char *buf_new = new char[BUFSIZ];
+	bzero(buf_new, BUFSIZ);
+
 	while (successfully_sent_counter < num_neighbour)
 	{
 		cnt = 0;
@@ -327,17 +330,21 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 			// std::cout << "File sent status" << file_sent_status[x.first] << std::endl;
 			// std::cout << "Successfully sent counter" << successfully_sent_counter << std::endl;
 			// std::cout << path + y << std::endl;
-			// std::cout << "Remaining data- " << remain_data << std::endl;
+			std::cout << "Remaining data- " << remain_data << std::endl;
 			// std::cout << "Client socket number- " << cnt << std::endl;
 
 			// while (true)
 			// {
+			bzero(buffer, BUFSIZ);
+
+			int len_to_read = std::min(int(BUFSIZ / 2), int(remain_data));
+			fd.read(buffer, len_to_read);
 			while (remain_data > 0)
 			{
-				bzero(buffer, BUFSIZ);
-				fd.read(buffer, BUFSIZ);
+
 				// sent_bytes = sendfile(client_socket[cnt], fd, (off_t *)&offset, remain_data);
-				sent_bytes = send(client_socket[cnt], buffer, BUFSIZ, 0);
+				sent_bytes = send(client_socket[cnt], buffer, len_to_read, 0);
+
 				if (sent_bytes < 0)
 				{
 					// std::cout << "Client could not send" << std::endl;
@@ -349,7 +356,19 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 					break;
 				}
 				remain_data -= sent_bytes;
-				// std::cout << "Sent " << sent_bytes << " bytes from file's data, offset is now : " << offset << " and remaining data = " << remain_data << "\n";
+				len_to_read = std::min(std::min(int(BUFSIZ / 2), int(remain_data)), 0);
+				if (sent_bytes > 100)
+				{
+					sent_bytes -= 10;
+					for (int ij = 0; ij < 10; ij++)
+					{
+						buffer[ij] = buffer[sent_bytes + ij];
+					}
+					bzero(buffer + 10, BUFSIZ - 10);
+
+					fd.read(buffer + 10, len_to_read);
+				}
+				std::cout << "Sent " << sent_bytes << " bytes from file's data, offset is now : " << offset << " and remaining data = " << remain_data << "\n";
 			}
 			auto start = std::chrono::system_clock::now(); // timer start
 			while (true)
@@ -648,14 +667,18 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 			received_file.open(path + "Downloaded/" + file_name, std::ios::binary);
 
 			// FILE *received_file = fopen((path + "Downloaded/" + file_name).c_str(), "w");
-			bzero(buffer, BUFSIZ);
 
 			remain_data = file_sz_map[file_name];
-			// std::cout << "Size of file " << remain_data << std::endl;
+			std::cout << "Size of file " << remain_data << std::endl;
 			while (remain_data > 0)
 			{
+				bzero(buffer, BUFSIZ);
 				// std::cout << "rec" << std::endl;
 				len = recv(current_socket.second, buffer, BUFSIZ, 0);
+				if (len > 100)
+				{
+					len -= 10;
+				}
 				if (len < 0)
 				{
 					// std::string mkdir = "mkdir -p " + path + "Error" + std::to_string(ID) + file_name;
@@ -674,6 +697,11 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 				}
 				if (remain_data <= len)
 				{
+					if (remain_data < len)
+					{
+						std::cout << "Received EXTRA" << std::endl
+								  << std::endl;
+					}
 					int ack = -1;
 					while (ack <= 0)
 					{
@@ -685,15 +713,17 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 					received_file << buffer_new;
 					file_rec_status[current_socket.first]++;
 					// std::cout << "Received a file. Also acked" << std::endl << std::endl;
-					remain_data = 0;
 				}
 				else
 				{
-					remain_data -= len;
-					received_file << buffer;
+					char *buffer_new = new char[len];
+					bzero(buffer_new, len);
+					strncpy(buffer_new, buffer, len);
+					received_file << buffer_new;
 				}
+				remain_data -= len;
 				bzero(buffer, BUFSIZ);
-				// std::cout << "Received " << len << " bytes and remaining -> " << remain_data << " bytes" << std::endl;
+				std::cout << "Received " << len << " bytes and remaining > " << remain_data << " bytes" << std::endl;
 			}
 
 			if (file_rec_status[current_socket.first] == file_client_map[current_socket.first].size())
@@ -716,7 +746,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 		}
 		else
 		{
-			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 "+get_hash(path+"Downloaded/"+i->first)+" at depth 1\n");
+			std::string s1 = ("Found " + i->first + " at " + std::to_string(i->second) + " with MD5 " + get_hash(path + "Downloaded/" + i->first) + " at depth 1\n");
 			std::cout << s1;
 		}
 	}
