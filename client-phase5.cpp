@@ -301,15 +301,15 @@ void extract_info(std::vector<std::string> svs,
 	std::vector<std::string> temp;
 	// std::map<std::string, std::pair<int, int>> fm;
 	int sz = svs.size();
-	// std::cout << svs[sz-1] << std::endl;
-	// std::vector<std::string> temporary;
-	// tokenize(svs[sz - 1], ',', temporary);
-	// std::vector<int> tmp;
-	// for (auto elem : temporary)
-	// {
-	// 	tmp.push_back(std::stoi(elem));
-	// }
-	// svt.push_back(tmp);
+	std::cout << svs[sz-1] << std::endl;
+	std::vector<std::string> temporary;
+	tokenize(svs[sz - 1], ',', temporary);
+	std::vector<int> tmp;
+	for (auto elem : temporary)
+	{
+		tmp.push_back(std::stoi(elem));
+	}
+	svt.push_back(tmp);
 	int i = 0;
 	for (; i < sz; ++i)
 	{
@@ -396,13 +396,25 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 
 	// std::cout << msg ;
 	// receive loop
+		std::map<std::string, std::pair<int, int>> fm;
+	std::vector<std::vector<int>> svt;
+	std::set<std::string> files_still_to_download;
+	bool flag = false;
+
 	std::map<int, std::vector<std::string>> server_map;
+	std::vector<std::string> xy, yz[num_neighbour];
 	for (int i = 0; i < num_neighbour; i++)
 	{
 		char buffer2[1000] = {'\0'};
 
 		recv(client_socket[i], buffer2, 1000, 0);
 		std::string m = buffer2;
+		tokenize(m, '{', xy);
+		m = xy[0];
+		tokenize(xy[1], '\n', yz[i]);
+		// std::cout << ID << " " << "yo\n";
+		bzero(buffer2, BUFSIZ);
+		//xy[1]
 		std::vector<std::string> x;
 		int c = m[0] - '0';
 		m.erase(m.begin());
@@ -416,9 +428,30 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		// 	std::cout<<y<<std::endl;
 		// }
 	}
+
+	for (auto x : files_to_download)
+	{
+
+		for (auto y : server_map)
+		{
+			for (auto z : y.second)
+			{
+				if (x.compare(z) == 0)
+				{
+					flag = true;
+				}
+			}
+		}
+		if (!flag)
+		{
+			files_still_to_download.insert(x);
+		}
+	}
 	// server_map stores the # of files to be sent to server[i]
 	//  send loop
-
+	for(int i=0; i<num_neighbour; i++){
+		extract_info(yz[i], files_still_to_download, fm, svt);
+	}
 	int cnt = 0;
 
 	/// int array of num_neighbours.
@@ -520,45 +553,8 @@ void client(int S_NO, int num_neighbour, std::vector<int> &neighbour_client_port
 		}
 	}
 
-	std::map<std::string, std::pair<int, int>> fm;
-	std::vector<std::vector<int>> svt;
-	std::set<std::string> files_still_to_download;
-	bool flag = false;
-	for (auto x : files_to_download)
-	{
 
-		for (auto y : server_map)
-		{
-			for (auto z : y.second)
-			{
-				if (x.compare(z) == 0)
-				{
-					flag = true;
-				}
-			}
-		}
-		if (!flag)
-		{
-			files_still_to_download.insert(x);
-		}
-	}
-	// for (int i = 0; i < num_neighbour; i++)
-	// {
-	// 	read(client_socket[i], buffer, BUFSIZ);
-	// 	std::string buf = buffer;
-	// 	// std::cout << buf;
-	// 	std::vector<std::string> pieces;
-	// 	tokenize(buf, '\n', pieces);
-	// 	// std::cout << ID << " " << "yo\n";
-	// 	bzero(buffer, BUFSIZ);
 
-	// 	// so now I will dump all the info to the client side and then process it all here itself.
-	// 	// Will also be sensible as I will all the info about both 1 depth and 2 depth neighbour.
-
-	// 	// need to process the string to extract the info about files and stuff
-	// 	extract_info(pieces, files_still_to_download, fm, svt);
-	// 	close(client_socket[i]);
-	// }
 	// std::sort(svt.begin(), svt.end(), [](const std::vector<int> &a, const std::vector<int> &b)
 	// 		  { return a[0] < b[0]; });
 
@@ -877,7 +873,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 			ssize_t by_sent;
 			if (!all_sent[i])
 			{
-				std::string blah = std::to_string(ID) + piece_together(file_client_map[neighbour_client_number[i]], '\n');
+				std::string blah = std::to_string(ID) + piece_together(file_client_map[neighbour_client_number[i]], '\n')+"{"+client_files_info;
 				const char *x = blah.c_str();
 				by_sent = send(current_socket.second, x, strlen(x), 0);
 				if (by_sent != -1)
@@ -1029,44 +1025,7 @@ void server(int PORT, std::vector<std::string> files_to_download, int num_neighb
 		}
 	}
 
-	bool counter[num_neighbours] = {};
-	int count = 0;
-
-	while (count < num_neighbours)
-	{
-		for (int i = 0; i < num_neighbours; i++)
-		{
-			if (counter[i])
-			{
-				continue;
-			}
-			// send the data to
-			// client_socket[i] and, basically, which file is where.
-			int val = -1;
-			auto start = std::chrono::system_clock::now(); // timer begin
-			auto now = start;
-			std::chrono::duration<double> diff = now - start;
-			double time;
-			while (val == -1)
-			{
-				val = send(client_socket[i], client_files_info.c_str(), strlen(client_files_info.c_str()), 0);
-				now = std::chrono::system_clock::now(); // timer end
-				diff = now - start;
-				time = diff.count();
-				if (time > 0.1)
-				{
-					break;
-				}
-			}
-			if (val != -1)
-			{
-				counter[i] = true;
-				count++;
-				close(client_socket[i]);
-			}
-		}
-	}
-
+	
 	// for (int i = 0; i < 30; i++)
 	// {
 	// 	client_socket[i] = 0;
